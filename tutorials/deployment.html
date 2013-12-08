@@ -1,0 +1,156 @@
+<html>
+	<head>
+		<title>EverBEEN</title>
+		<link rel="stylesheet" type="text/css" href="../css/bootstrap.css"/>
+		<link rel="stylesheet" type="text/css" href="../css/custom.css"/>
+		<script src="../js/bootstrap.js" type="text/javascript" charset="utf-8"></script>
+	</head>
+
+	<body>
+		<div id="header"></div>
+
+		<div id="main">
+			<h1>EverBEEN deployment</h1>
+
+			<p>
+				Deploying EverBEEN is pretty straightforward. You'll need to download the <a href="/jars/latest/been.jar">node</a> <em>jar</em> and the <a href="/jars/latest/been-wi.war">web interface</a> <em>war</em>. The <em>been.jar</em> is the basic unit of the EverBEEN cluster, and you'll be running it in multiple instances. The <em>been-wi.war</em> is the webapp user interface to the EverBEEN cluster, and can be deployed to a standard servlet container, or run separately in an embedded jetty container.
+			</p>
+
+
+			<h2>1. Running EverBEEN</h2>
+
+			<p>The deployment process assumes a set of interconnected computers on which the framework is supposed to run and a running MongoDB instance.</p>
+
+			<p>Deploying EverBEEN consists of two steps:</p>
+
+			<ul>
+			<li><p>Copying EverBEEN onto each machine – single executable jar file is provided</p></li>
+			<li><p>Creating clustering configurations</p></li>
+			</ul>
+
+
+			<p>The exact configuration is highly dependent on the network topology. In the following example configuration two scenarios will be presented depending on how the cluster will be formed.</p>
+
+			<p>Usually, there will be a few <em>DATA</em> nodes and as many <em>NATIVE</em> nodes running the Host Runtime service as needed.</p>
+
+			<p>We will also assume that MongoDB instance is running on <code>mongodb.example.com</code>. All nodes must use the same <em>group</em> and <em>group password</em>.</p>
+
+			<h2>2. Broadcasting scenario</h2>
+
+			<p>The cluster is formed through broadcasting.</p>
+
+			<pre><code>been.cluster.mapstore.db.hostname=mongodb.example.com
+mongodb.hostname=mongodb.example.com
+
+been.cluster.multicast.group=224.2.2.4
+been.cluster.multicast.port=54326
+
+been.cluster.group=dev
+been.cluster.password=dev-pass</code></pre>
+
+			<p>Only the first two configuration options are needed, rest of options have sane defaults.</p>
+
+			<h2>3. Direct connection scenario</h2>
+
+			<p>The cluster will be formed by directly connecting nodes.</p>
+
+			<pre><code>been.cluster.mapstore.db.hostname=mongodb.example.com
+mongodb.hostname=mongodb.example.com
+
+been.cluster.join=tcp
+been.cluster.tcp.members=195.113.16.40:5701;host1.example.com;host2.example.com
+
+been.cluster.group=dev
+been.cluster.password=dev-pass</code></pre>
+
+			<p>The <code>been.cluster.tcp.members</code> option specifies a (potentially partial) list of nodes to which the connecting node will try to connect. If no node in the list is responding a new cluster will be formed.</p>
+
+			<h2>4. Connecting NATIVE nodes</h2>
+
+			<p>NATIVE nodes must be informed to which DATA nodes to connect:</p>
+
+			<pre><code>been.cluster.client.members=host1.example.com:5701;host2.example.com
+been.cluster.group=dev
+been.cluster.password=dev-pass</code></pre>
+
+			<p>The <code>been.cluster.client.members</code> option is important, again specifying a (potentially partial) list of DATA nodes to connect to.</p>
+
+			<p>The configuration can be copied directly onto the hosts or can be referenced by an URL (which is the preferred way).</p>
+
+			<h2>5. Configuring EverBEEN services</h2>
+
+			<p>The next step is to decide which BEEN services will be run and where. In the simplest and most straight forward case one node will be running <em>Software repository</em>, <em>Object repository</em>, <em>Host Runtime</em> and implicitly the <em>Task Manager</em>.</p>
+
+			<p><code>java -jar been.jar -r -sw -rr -cf http://been.example.com/been.properties</code></p>
+
+			<p>Other nodes thus can run only the <em>Host Runtime</em> service.</p>
+
+			<dt><code>java -jar been.jar -t NATIVE -r -cf http://been.example.com/been-clients.properties</code></dt>
+			<dd>for NATIVE nodes</dd>
+
+			<dt><code>java -jar been.jar -r  http://been.example.com/been-broadcast.properties</code></dt>
+			<dd>in case of the broadcasting scenario</dd>
+
+			<dt><code>java -jar been.jar -r -sw -rr -cf http://been.example.com/been-direct.properties</code></dt>
+			<dd>in case of the direct connection scenario</dd>
+
+			<br />
+
+			<p>To list available command line options run EverBEEN with:</p>
+
+			<pre><code>`java -jar been.jar --help`</code></pre>
+
+			<h2>6. Running the Web Interface</h2>
+
+			<p>The last step consists of deploying and running the <em>Web Interface</em>. The supplied war file can be deployed to a standard Java Servlet container (e.g. Tomcat). Or can be run directly by</p>
+
+			<p><code>java -jar web-interface-3.0.0-SNAPSHOT.war</code></p>
+
+			<p>using an embedded container.</p>
+
+			<h2>7. Node directory structure</h2>
+
+			<p>Node working directory is created on startup.</p>
+
+			<pre><code>1.  .HostRuntime/
+2.      \___ tasks/
+3.          \___ 1378031207851/
+4.          \___ 1378038338005/
+5.          \___ 1378038763308/
+6.          \___ 1378040071618/
+7.              \___ example-task-a_1bdcaeb4/
+8.              |   \___ config.xml
+9.              |   \___ files/
+10.             |   \___ lib/
+11.             |   \___ stderr.log
+12.             |   \___ stdout.log
+13.             |   \___ tcds/
+14.             |   \___ tds/
+15.             \___ example-task-b_6a2ccc11/
+16.             \___ ...
+17.             \___ ...</code></pre>
+
+			<ul>
+			<li><p><strong>.HostRuntime</strong> directory (1) --- Host Runtime global working directory. It can be configured by changing the property <code>hostruntime.wrkdir.name</code>. The default name is <code>.HostRuntime</code>.</p></li>
+			<li><p>Each run of EverBEEN creates separate working directory for its tasks in the <strong>tasks</strong> subdirectory (2).</p></li>
+			<li><p>On restart a new working directory for tasks (3,4,5,6) is created. Names of these directories are based on the node startup (wall clock) time. EverBEEN on each start checks these directories and if their number exceeds 4 (by default), the oldest one is deleted. This prevents an unexpected growth of the Host Runtime working directory size, but allows debugging failed tasks when the underlying Host Runtime is terminated and restarted. The number of backed up directories is configurable by the <code>hostruntime.tasks.wrkdir.maxHistory</code> configuration option.</p></li>
+			<li><p>Working directories of tasks (7,15,16,17) contain files from an extracted BPK (8,9,10,13,14) and log files for the standard error output (11) and standard output (12).</p></li>
+			</ul>
+
+
+			<p>The working directory of a task is deleted only if the task finished its execution without error, otherwise the directory remains unchanged. Alternatively, you can either clean up the directory manually or use the Web Interface for that purpose.</p>
+
+			<h2>8. Limitations</h2>
+
+			<ul>
+			<li><p>If you want to run more than one Host Runtime on the same machine we <strong>strongly recommend</strong> to start each node with a different working directory name. Running multiple instances concurrently with the same working directory <em>is not supported</em>.</p></li>
+			<li><p>Running EverBEEN for a long time without clearing directories after failed tasks can result in low disk space.</p></li>
+			</ul>
+
+		</div>
+
+		<div id="footer">
+			<a href="/index.html">Back to home page</a>
+		</div>
+	</body>
+</html>

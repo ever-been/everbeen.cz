@@ -1,0 +1,644 @@
+<html>
+	<head>
+		<title>EverBEEN</title>
+		<link rel="stylesheet" type="text/css" href="../css/bootstrap.css"/>
+		<link rel="stylesheet" type="text/css" href="../css/custom.css"/>
+		<script src="../js/bootstrap.js" type="text/javascript" charset="utf-8"></script>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+	</head>
+
+	<body>
+		<div id="header"></div>
+
+		<script src="https://google-code-prettify.googlecode.com/svn/loader/run_prettify.js"></script>
+
+		<div id="main">
+			<h1>Writing an EverBEEN benchmark</h1>
+
+			<p>
+				This tutorial will guide you through the process of implementing a simple benchmark. The benchmark will consist of a server and configurable number of clients that will stress-test the server. The clients will communicate with the server by passing 0MQ messages and measure the time it took to send a configurable number of messages.
+			</p>
+
+			<h2>0. Prerequisites</h2>
+
+			<p>
+				Before you start writing your first benchmark, you should have already installed and deployed EvenBEEN on your testing machine. You should already be familiar with starting EverBEEN and accessing its web interface.
+			</p>
+
+			<p>
+				For development, you need Java 7 and <a href="http://maven.apache.org/">Apache Maven</a>. EverBEEN provides a Maven Archetype and Maven Plugin for an easy way to create and package benchmarks.
+			</p>
+
+			<h2>1. Generating a basic benchmark structure</h2>
+
+			<p>
+				As a first step, you should run:
+			</p>
+
+			<pre><code>mvn archetype:generate -DarchetypeCatalog=http://everbeen.cz</code></pre>
+
+			<p>
+				on your console to generate a basic directory structure. You will be asked to provide Maven group name, artifact name, version and a Java package that will be used. Let's say you enter:
+			</p>
+
+			<pre><code>groupId: com.example.been.benchmark
+artifactId: example-benchmark
+version: 1.0.0-SNAPSHOT
+Java package: com.example.been.benchmark</code></pre>
+
+			<p>
+				This will create the following directory structure:
+			</p>
+
+			<pre><code>.
+├── pom.xml
+└── src
+    └── main
+        ├── java
+        │   └── com
+        │       └── example
+        │           └── been
+        │               └── benchmark
+        │                   ├── ExampleBenchmark.java
+        │                   └── ExampleTask.java
+        └── resources
+            └── com
+                └── example
+                    └── been
+                        └── benchmark
+                            ├── ContextTemplate.tcd.xml
+                            └── ExampleBenchmark.td.xml</code></pre>
+
+			<p>
+				This is a simple "Hello World" benchmark, that will generate 10 contexts with a single task, that just logs a "Hello World" message. You can try packaging this benchmark using:
+			</p>			
+
+			<pre><code>mvn package</code></pre>
+
+			<p>
+				This should create a BPK file called "example-1.0.0-SNAPHOT.bpk" in your "target/" directory. You can now upload this BPK file into EverBEEN via the web interface and run it.
+			</p>
+
+			<p>
+				We are now going to implement a simple server-client benchmark. The benchmark will generate a server and a configurable number of clients which will stress-test the server.
+			</p>
+
+			<h2>2. Adding configurable properties</h2>
+
+			<p>
+				As the first step, we will add more configurable properties to the benchmark. Let's add the following into the "&lt;properties>" tag in "ExampleBenchmark.td.xml":
+			</p>
+
+			<pre class="prettyprint lang-xml"><code>&lt;property name="clients.count" description="Number of clients to spawn per context">2&lt;/property>
+&lt;property name="benchmark.runs" description="Number of benchmark runs">10&lt;/property>
+&lt;property name="clients.messages" description="Number of messages each client will send">1000&lt;/property></code></pre>
+
+			<p>
+				These define the configurable properties of the benchmark, each property has a name, a description and a default value. These properties will drive the benchmark generator.
+			</p>
+
+			<p>
+				To access the properties inside the benchmark, we will modify the "generateTaskContext" method of "ExampleBenchmark" class to the following:
+			</p>
+
+			<pre class="prettyprint lang-java"><code>import cz.cuni.mff.d3s.been.util.PropertyReader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import cz.cuni.mff.d3s.been.benchmarkapi.Benchmark;
+import cz.cuni.mff.d3s.been.benchmarkapi.BenchmarkException;
+import cz.cuni.mff.d3s.been.benchmarkapi.ContextBuilder;
+import cz.cuni.mff.d3s.been.core.task.TaskContextDescriptor;
+import cz.cuni.mff.d3s.been.core.task.TaskContextState;
+
+...
+
+private static final Logger log = LoggerFactory.getLogger(ExampleBenchmark.class);
+
+@Override
+public TaskContextDescriptor generateTaskContext() throws BenchmarkException {
+    PropertyReader propertyReader = createPropertyReader();
+
+    // get value of the task property
+    int maxRuns = propertyReader.getInteger("benchmark.runs", 0);
+
+    // get current run from benchmark storage
+    Integer currentRun = Integer.valueOf(storageGet("benchmark.run.current", "0"));
+
+    log.debug("Running context generator for run {}", currentRun);
+
+    if (currentRun >= maxRuns || maxRuns <= 0) {
+	    log.debug("No more context will be generated. Benchmark will end.");
+	    return null;
+    } else {
+    	storageSet("benchmark.run.current", (++currentRun).toString());
+
+	    ContextBuilder contextBuilder = ContextBuilder.createFromResource(this.getClass(), "ContextTemplate.tcd.xml");
+	    return contextBuilder.build();
+    }
+}</code></pre>
+
+			<p>
+				This shows how to access properties of a task. We can also remove the "runNumber" field, which is not needed anymore, because the generator now uses the <b>benchmark storage</b> as a mean of persisting its state. This mechanism allow the state to be restored even after a failure.
+			</p>
+
+			<h2>3. Creating client and server tasks</h2>
+
+			<p>
+				We are now going to create a server and client task classes. Let's duplicate the code of "ExampleTask" class into "ServerTask" and "ClientTask" classes:
+			</p>
+
+			<pre class="prettyprint lang-java"><code>import cz.cuni.mff.d3s.been.mq.MessagingException;
+import cz.cuni.mff.d3s.been.persistence.DAOException;
+import cz.cuni.mff.d3s.been.taskapi.CheckpointController;
+import cz.cuni.mff.d3s.been.taskapi.Task;
+import cz.cuni.mff.d3s.been.taskapi.TaskException;
+import cz.cuni.mff.d3s.been.util.PropertyReader;
+import org.jeromq.ZMQ;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.TimeoutException;
+
+public class ClientTask extends Task {
+
+	private static final Logger log = LoggerFactory.getLogger(ClientTask.class);
+
+	@Override
+	public void run(String[] strings) throws TaskException, MessagingException, DAOException {
+		log.info("Hello from client!");
+	}
+
+}</code></pre>
+
+			<pre class="prettyprint lang-java"><code>import cz.cuni.mff.d3s.been.mq.MessagingException;
+import cz.cuni.mff.d3s.been.persistence.DAOException;
+import cz.cuni.mff.d3s.been.taskapi.CheckpointController;
+import cz.cuni.mff.d3s.been.taskapi.Task;
+import cz.cuni.mff.d3s.been.taskapi.TaskException;
+import cz.cuni.mff.d3s.been.util.PropertyReader;
+import org.jeromq.ZMQ;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
+public class ServerTask extends Task {
+
+	private static final Logger log = LoggerFactory.getLogger(ServerTask.class);
+
+	@Override
+	public void run(String[] strings) throws TaskException, MessagingException, DAOException {
+		log.info("Hello from server!");
+	}
+
+}</code></pre>
+
+			<p>
+				Now, we can remove the original "ExampleTask" class. The next step is to modify the "ContextTemplate.tcd.xml" descriptor to include these new tasks:
+			</p>
+
+			<pre class="prettyprint lang-xml"><code>&lt;?xml version="1.0"?>
+&lt;taskContextDescriptor xmlns="http://been.d3s.mff.cuni.cz/task-context-descriptor"
+                       xmlns:td="http://been.d3s.mff.cuni.cz/task-descriptor"
+                       name="example-context">
+
+	&lt;task>
+		&lt;name>server&lt;/name>
+		&lt;descriptor>
+			&lt;td:taskDescriptor groupId="com.example.been.benchmark" bpkId="example-benchmark" version="1.0.0-SNAPSHOT"
+			                   type="task">
+
+				&lt;td:java>
+					&lt;td:mainClass>com.example.been.benchmark.ServerTask&lt;/td:mainClass>
+				&lt;/td:java>
+			&lt;/td:taskDescriptor>
+		&lt;/descriptor>
+	&lt;/task>
+
+	&lt;templates>
+		&lt;template name="client">
+			&lt;td:taskDescriptor groupId="com.example.been.benchmark" bpkId="example-benchmark" version="1.0.0-SNAPSHOT"
+			                   type="task">
+				&lt;td:java>
+					&lt;td:mainClass>com.example.been.benchmark.ClientTask&lt;/td:mainClass>
+				&lt;/td:java>
+			&lt;/td:taskDescriptor>
+		&lt;/template>
+	&lt;/templates>
+
+&lt;/taskContextDescriptor></code></pre>
+
+			<p>
+				Here, we created the "server" task as a static task, but the "client" task is declared as a template. This is because the benchmark is going to generate multiple tasks from this template, based on a configurable parameter. Let's implement this in the "ExampleBenchmark" class, by modifying the "else" branch to the following:
+			</p>
+
+			<pre class="prettyprint lang-java"><code>// how many clients?
+int numberOfClients = propertyReader.getInteger("clients.count", 2);
+int messagesPerClient = propertyReader.getInteger("clients.messages", 1000);
+
+if (numberOfClients <= 0) {
+	log.error("Number of clients must be bigger than zero");
+	return null;
+}
+
+storageSet("benchmark.run.current", (++currentRun).toString());
+
+return generateContext(currentRun, numberOfClients, messagesPerClient);</code></pre>
+
+			<p>
+				Now, we will implement the "generateContext" method, which will create the specified number of clients inside the context:
+			</p>
+
+		<pre class="prettyprint lang-java"><code>private TaskContextDescriptor generateContext(Integer run, Integer numberOfClients, Integer messagesPerClient) throws BenchmarkException {
+	// create context from a template
+	ContextBuilder builder = ContextBuilder.createFromResource(ExampleBenchmark.class, "ContextTemplate.tcd.xml");
+
+	builder.setName(String.format("Example benchmark [run: %d]", run));
+
+	// lets propagate the properties to the tasks
+	builder.setProperty("clients.count", numberOfClients.toString());
+	builder.setProperty("clients.messages", messagesPerClient.toString());
+	builder.setProperty("run", run.toString());
+	builder.setProperty("task.log.level", getTaskProperty("task.log.level", "INFO"));
+
+	// add appropriate number of tasks
+	for (int i = 0; i < numberOfClients; ++i) {
+		final String clientName = String.format("client%d", i);
+		builder.addTask(clientName, "client");
+
+	}
+
+	// create the context
+	return builder.build();
+}
+</code></pre>
+
+			<p>
+				You can now again package the project into a BPK file and run it in EverBEEN. You will see that the benchmark will generate the specified number of contexts, each consisting of a server and a specified number of clients.
+			</p>
+
+			<h2>4. Implementing the server task</h2>
+
+			<p>
+				Now we will implement the server task, which will start a 0MQ server and receive all the messages from the clients. For this we will need a few helper methods and fields in the "ServerTask" class:
+			</p>
+
+			<pre class="prettyprint lang-java"><code>private ZMQ.Context context = null;
+private ZMQ.Socket socket = null;
+
+private String startServer() throws TaskException {
+	final String hostName = getHostName();
+	final String address = String.format("tcp://%s", hostName);
+
+	try {
+		context = ZMQ.context();
+		socket = context.socket(ZMQ.REP);
+		socket.setReceiveTimeOut(3000);
+		socket.setSendTimeOut(0); // will not wait
+		int port = socket.bindToRandomPort(address);
+
+		return String.format("tcp://%s:%d", hostName, port);
+	} catch (Exception e) {
+		throw new TaskException("Cannot start the server!");
+	}
+}
+
+private String getHostName() throws TaskException {
+	try {
+		return InetAddress.getLocalHost().getHostName();
+	} catch (UnknownHostException e) {
+		throw new TaskException("Cannot obtain host name!");
+	}
+}
+
+public int getTotalNumberOfConnections() {
+	PropertyReader propertyReader = createPropertyReader();
+	int numberOfClients = propertyReader.getInteger("clients.count", 0);
+	int numberOfMessages = propertyReader.getInteger("clients.messages", 0);
+	return numberOfClients * numberOfMessages;
+}</code></pre>
+
+			<p>With these methods, we can now implement the main "run" method of "ServerTask":</p>
+
+			<pre class="prettyprint lang-java"><code>@Override
+public void run(String[] strings) throws TaskException, MessagingException, DAOException {
+	final String address = startServer();
+
+	try (CheckpointController checkpoints = CheckpointController.create()) {
+		// set checkpoint
+		checkpoints.checkPointSet("address", address);
+
+		int totalNumberOfConnections = getTotalNumberOfConnections();
+
+		long start = System.nanoTime();
+		for (int i = 0; i < totalNumberOfConnections; ++i) {
+			String msg = socket.recvStr();
+
+			// handle server timeout
+			if (msg == null) {
+				log.error("Server timeout!");
+				break;
+			}
+
+			socket.send("OK: " + msg);
+		}
+
+		long end = System.nanoTime();
+		log.debug("Server completed test in {} ms ", (end - start) / 1000000);
+	} finally {
+		// don't forget to close the connection
+		socket.close();
+		context.term();
+	}
+}</code></pre>
+
+			<p>
+				Apart from the server messaging logic, we can see that we are using a "CheckpointController" to implement data passing between tasks inside the task context. Specifially, we are passing the IP address and port of the server into the checkpoint called "address". The client tasks will wait for this value to be set, as we are going to see later in this tutorial.
+			</p>
+
+			<h2>5. Implementing the client task</h2>
+
+			<p>
+				Implementing the client task is going to be very similar:
+			</p>
+
+			<pre class="prettyprint lang-java"><code>@Override
+public void run(String[] strings) throws TaskException, MessagingException, DAOException {
+	ZMQ.Context context = ZMQ.context();
+	ZMQ.Socket socket = context.socket(ZMQ.REQ);
+
+	try (CheckpointController requestor = CheckpointController.create()) {
+		// get server address and port
+		String address = requestor.checkPointWait("address", 3000);
+
+		log.debug("Server address received: {}", address);
+
+		// connect to the server
+		socket.connect(address);
+
+		PropertyReader propertyReader = createPropertyReader();
+		int numberOfMessages = propertyReader.getInteger("clients.messages", 0);
+
+		long start = System.nanoTime();
+		for (int msgCount = 0; msgCount < numberOfMessages; ++msgCount) {
+			String msg = String.format("CLIENT: %s, RUN: %d", getId(), msgCount);
+			socket.send(msg);
+
+			//do nothing with the reply
+			socket.recvStr();
+		}
+
+		// print something
+		long end = System.nanoTime();
+		long elapsed = (end - start);
+		log.debug("Test completed in {} ms", elapsed / 1000000);
+
+	} catch (TimeoutException e) {
+		throw new TaskException("The client timeout!", e);
+	} finally {
+		// don't forget to close the connection
+		socket.close();
+		context.term();
+	}
+}</code></pre>
+
+			<p>Note that the method "checkPointWait" passively until the specified checkpoint has some value set. After that it will return this value.
+
+			<p>If you package and run the benchmark now, you will that the tasks successfully pass 0MQ messages and if you set the log level to "DEBUG", you will see the time measurements in the log console.</p>
+
+			<h2>6. Storing results</h2>
+
+			<p>
+				The clients now measure the time it takes to perform the test, but we need some way of storing these results. Let's create a data structure to hold a single result:
+			</p>
+
+			<pre class="prettyprint lang-java"><code>import cz.cuni.mff.d3s.been.results.Result;
+
+public class ExampleResult extends Result {
+	public int run;
+	public int messages;
+	public long elapsed;
+
+	// Result must have public constructor
+	public ExampleResult() {
+
+	}
+}</code></pre>
+
+			<p>Note that the result must be a subclass of the "Result" class. Also it must have a public non-parametric constructor, because of the way it is (de-)serialized.</p>
+
+			<p>Next, let's create a helper method (in the "ClientTask" class) to persist a single result:</p>
+
+			<pre class="prettyprint lang-java"><code>private void storeResult(long elapsed, int messages, int run) throws DAOException {
+	ExampleResult result = results.createResult(ExampleResult.class);
+
+	result.elapsed = elapsed;
+	result.messages = messages;
+	result.run = run;
+
+	results.persistResult(result, "example-benchmark");
+}</code></pre>
+
+			<p>Note that we don't create a instance of "ExampleResult" directly, instead we use the method "createResult". This will ensure that various metadata of the result (e.g. ID of the benchmark) are set properly.</p>
+
+			<p>Finally, let's call this helper method from the "run" method in ClientTask. Add this line to the end of the "try" block:</p>
+
+			<pre class="prettyprint lang-lava"><code>storeResult(elapsed, numberOfMessages, propertyReader.getInteger("run", 0));</code></pre>
+
+			<h2>7. Implementing proper synchronization</h2>
+
+			<p>When developing and running benchmarks that run simultaneously on different machines, you will find that the synchonization we just implemented (clients wait until server announces its address) isn't enough. For example due to different networks one client might get started much later than the other. EverBEEN provides additional synchronization mechanisms that can be used to eliminate this problem.</p>
+
+			<p>We are going to implement a rendezvous point, when then server first waits for all the clients to reach this point before it signals them that the benchmark should start. For this, we will use a mechanism called <b>countdown latch</b>, which behaves like an atomic number and it has a "wait" method, which will wait until this atomic number reaches zero.
+			</p>
+
+			<p>In "ServerTask", replace the line of the call to "checkPointSet" with the following:</p>
+
+			<pre class="prettyprint lang-lava"><code>PropertyReader propertyReader = createPropertyReader();
+int numberOfClients = propertyReader.getInteger("clients.count", 0);
+// set count down latch, this must be done before address checkpoint!
+checkpoints.latchSet("rendezvous", numberOfClients);
+// set checkpoint
+checkpoints.checkPointSet("address", address);
+// wait for all clients
+checkpoints.latchWait("rendezvous", 3000);
+// signal the clients to start
+checkpoints.checkPointSet("go", "go");</code></pre>
+
+			<p>We also need to add a "catch" clause, because the waiting for the latch can timeout:</p>
+
+			<pre class="prettyprint lang-lava"><code>import java.util.concurrent.TimeoutException;
+
+...
+
+try (CheckpointController checkpoints = CheckpointController.create()) {
+	...
+} catch (TimeoutException e) {
+	throw new TaskException("Server timeout!");
+} finally {
+	...
+}</code></pre>
+
+			<p>On the client side, the implementation is easier, just add the following code after the line with "socket.connect(address)" (in the "ClientTask" class):</p>
+
+			<pre class="prettyprint lang-lava"><code>// count down
+requestor.latchCountDown("rendezvous");
+// wait for others
+requestor.checkPointWait("go", 3000);
+log.debug("Checkpoint 'go' reached");</code></pre>
+
+			<p>Now you can once again package and run the benchmark. This time all the tasks within a context will wait for each other to initialize before starting the actual benchmarking.</p>
+
+			<h2>8. Writing an evaluator</h2>
+
+			<p>
+				The final goal of this tutorial will be to implement an evaluator, which will aggregate the measured results (by calculating the average of individual runs). This evaluator is simply a task, but we will make it a standalone task (it will not be a part of the benchmark), so it could be run separately. As a parameter it will take an ID of a benchmark. The evaluator will query the result storage, extract all results from the benchmark with the specified ID and return a CSV plaintext file with the aggregated results.
+			</p>
+
+			<p>Let's start by creating a new class called "ExampleEvaluator" which will be a subclass of "Evaluator":</p>
+
+			<pre class="prettyprint lang-lava"><code>import cz.cuni.mff.d3s.been.core.persistence.EntityID;
+import cz.cuni.mff.d3s.been.evaluators.EvaluatorResult;
+import cz.cuni.mff.d3s.been.mq.MessagingException;
+import cz.cuni.mff.d3s.been.persistence.DAOException;
+import cz.cuni.mff.d3s.been.persistence.Query;
+import cz.cuni.mff.d3s.been.persistence.QueryBuilder;
+import cz.cuni.mff.d3s.been.taskapi.Evaluator;
+import cz.cuni.mff.d3s.been.taskapi.TaskException;
+
+public class ExampleEvaluator extends Evaluator {
+
+	@Override
+	protected EvaluatorResult evaluate() throws TaskException, MessagingException, DAOException {
+		String benchmarkId = this.getTaskProperty("evaluator.benchmark.id", "");
+
+		EvaluatorResult evaluatorResult = new EvaluatorResult();
+
+		evaluatorResult.setBenchmarkId(benchmarkId);
+		evaluatorResult.setFilename("example-result.txt");
+		evaluatorResult.setTimestamp(System.currentTimeMillis());
+		evaluatorResult.setMimeType(EvaluatorResult.MIME_TYPE_PLAIN);
+		evaluatorResult.setData("Hello World!".getBytes());
+		evaluatorResult.setId(getId());
+
+		return evaluatorResult;
+	}
+
+}</code></pre>
+
+			<p>Because this is a standalone task, we must provide a XML task descriptor for it. Create a resource named "ExampleEvaluator.td.xml" with this content:</p>
+
+			<pre class="prettyprint lang-xml"><code>&lt;?xml version="1.0"?>
+&lt;taskDescriptor xmlns="http://been.d3s.mff.cuni.cz/task-descriptor"
+                groupId="com.example.been.benchmark" bpkId="example-benchmark" version="1.0.0-SNAPSHOT"
+                name="example-evaluator" type="task">
+
+	&lt;java>
+		&lt;mainClass>com.example.been.benchmark.ExampleEvaluator&lt;/mainClass>
+	&lt;/java>
+
+	&lt;properties>
+		&lt;property name="task.log.level" description="Log level of the ExampleEvaluator task">INFO&lt;/property>
+		&lt;property name="evaluator.benchmark.id" description="ID of the benchmark whose results should be evaluated">&lt;/property>
+	&lt;/properties>
+
+&lt;/taskDescriptor></code></pre>
+
+			<p>To be able to run this task we have to <i>publish</i> this task descriptor in the "pom.xml" file. Find the section "&lt;taskDescriptors>" inside this file and change its content to:</p>
+
+			<pre class="prettyprint lang-xml"><code>&lt;taskDescriptors>
+    &lt;param>src/main/resources/com/example/been/benchmark/ExampleBenchmark.td.xml&lt;/param>
+    &lt;param>src/main/resources/com/example/been/benchmark/ExampleEvaluator.td.xml&lt;/param>
+&lt;/taskDescriptors></code></pre>
+
+			<p>
+				Now we can package and upload the whole benchmark again. In the web interface, if you choose to submit a new item, you will see that you can now submit our evaluator task. After you run the evaluator, you will find a new "Hello World" results in the Results page.
+			</p>
+
+			<h2>9. Retrieving results</h2>
+
+			<p>
+				The last thing to do is to retrieve data for a specific benchmark ID from the result storage and aggregate them. Let's modify the "evaluate" method of "ExampleEvaluator" to the following:
+			</p>
+
+			<pre class="prettyprint lang-java"><code>String benchmarkId = this.getTaskProperty("evaluator.benchmark.id", "");
+
+final Collection&lt;ExampleResult> clientResults = retrieveResults(benchmarkId);
+
+String output = buildOutput(clientResults);
+
+EvaluatorResult evaluatorResult = new EvaluatorResult();
+
+evaluatorResult.setBenchmarkId(benchmarkId);
+evaluatorResult.setFilename("example-result.txt");
+evaluatorResult.setTimestamp(System.currentTimeMillis());
+evaluatorResult.setMimeType(EvaluatorResult.MIME_TYPE_PLAIN);
+evaluatorResult.setData(output.getBytes());
+evaluatorResult.setId(getId());
+
+return evaluatorResult;</code></pre>
+
+			<p>Now, we will implement the "retrieveResults" method:</p>
+
+		<pre class="prettyprint lang-java"><code>private Collection&lt;ExampleResult> retrieveResults(String benchmarkId) throws DAOException, TaskException {
+	// entity of the results
+	final EntityID eid = new EntityID().withKind("result").withGroup("example-benchmark");
+	// create query to fetch data with
+	Query query = new QueryBuilder().on(eid).with("benchmarkId", benchmarkId).fetch();
+	// fetch data from Object Repository
+	final Collection&lt;ExampleResult> clientResults = results.query(query, ExampleResult.class);
+
+	// any data returned?
+	if (clientResults.size() == 0) {
+		String msg = String.format("Found no results for benchmark '%s'", benchmarkId);
+		throw new TaskException(msg);
+	}
+	return clientResults;
+}</code></pre>
+
+			<p>This shows how you can fetch data from the Object Repository. First you need to have an "EntityID" object which describes the type of the result you want to retrieve. Then you build a query where you can filter the results. In this case we only fetch results with the specified benchmark ID. Lastly, you can use the "query" method of the "results" fields to actually perform the query and retrieve data.</p>
+
+			<p>Now we just have to implement the "buildOutput" method:</p>
+
+		<pre class="prettyprint lang-java"><code>private String buildOutput(Collection&lt;ExampleResult> clientResults) {
+	TreeMap&lt;Integer, List&lt;Long>> grouped = new TreeMap&lt;>();
+	for (ExampleResult result : clientResults) {
+		if (! grouped.containsKey(result.run)) grouped.put(result.run, new ArrayList&lt;Long>());
+		grouped.get(result.run).add(result.elapsed);
+	}
+
+	StringBuilder stringBuilder = new StringBuilder();
+	for (Map.Entry&lt;Integer, List&lt;Long>> entry : grouped.entrySet()) {
+		int run = entry.getKey();
+		long sum = 0;
+		for (Long value : entry.getValue()) {
+			sum += value;
+		}
+		double avg = 1.0 * sum / entry.getValue().size() / 1_000_000_000.0;
+		stringBuilder.append(String.format("%d;%f\n", run, avg));
+	}
+
+	return stringBuilder.toString();
+}</code></pre>
+
+			<p>This method just performs some grouping of the results and calculates the average of each run. Then it constructs a string that will be the output of the evaluator.</p>
+
+			<h2>10. Where to go next?</h2>
+
+			<p>
+				Congratulations! You just built a client-server benchmark, with synchronization, data passing, result storing and data aggregation.
+			</p>
+
+			<p>
+				We encourage you to take a look at our sample implementations of other benchmarks, which will show you some more features of EverBEEN. We even show an example evaluator that plots a nice graph of the aggregated results.
+			</p>
+	
+		</div>
+
+		<div id="footer">
+			<a href="/index.html">Back to home page</a>
+		</div>
+	</body>
+</html>

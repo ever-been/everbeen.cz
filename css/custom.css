@@ -1,0 +1,32 @@
+div#header {
+	margin-left: 10px;
+	margin-right: 10px;
+}
+
+div#footer {
+	margin-left: 10px;
+	margin-right: 10px;
+}
+
+div#main {
+	margin-left: 10px;
+	margin-right: 10px;
+}
+
+div.halfbox {
+	float: left;
+	min-width: 600px;
+	width: 50%;
+}
+div.halfbox pre {
+	font-size: 70%;
+}
+div.halfbox pre.dependency {
+	float: left;
+	width: 46%;
+	min-width: 280px;
+	font-size: 60%;
+}
+div.halfbox div.perex {
+	height: 200px;
+}

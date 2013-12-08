@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<archetype-catalog> 
+	<archetypes>
+<!-- Manually editted by donarus 19 Sep 2013 -->
+		<archetype> 
+			<groupId>cz.cuni.mff.d3s.been.tutorial</groupId> 
+			<artifactId>benchmark-tutorial-archetype</artifactId> 
+			<version>1.0-SNAPSHOT</version> 
+			<description>EverBEEN benchmark archetype</description> 
+			<repository>http://everbeen.cz/artifactory/libs-snapshot-local</repository>
+		</archetype>
+	</archetypes> 
+</archetype-catalog> 
+

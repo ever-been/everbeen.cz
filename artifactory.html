@@ -1,0 +1,101 @@
+<html>
+	<head>
+		<title>EverBEEN</title>
+		<link rel="stylesheet" type="text/css" href="css/bootstrap.css"/>
+		<link rel="stylesheet" type="text/css" href="css/custom.css"/>
+		<script src="js/bootstrap.js" type="text/javascript" charset="utf-8"></script>
+	</head>
+
+	<body>
+		<div id="header"></div>
+
+		<div id="main">
+			<h1>EverBEEN artifactory</h1>
+			<p>To browse the artifactory, click <a href="/artifactory">here</a>. EverBEEN runs the following artifactory containers:</p>
+
+			<div id="release" class="halfbox">
+			<h2>release</h2>
+			<div class="perex">
+				<p>
+					There are currently no release versions available.
+				</p>
+			</div>
+	
+			<p>
+				Release artifacts are hosted in these repositories:
+			</p>
+			<h3>libs</h3>
+			<pre>
+&lt;repositories&gt;
+	&lt;repository&gt;
+		&lt;id&gt;everbeen.cz-libs-release&lt;/id&gt;
+		&lt;url&gt;http://everbeen.cz/artifactory/libs-release-local&lt;/url&gt;
+	&lt;/repository&gt;
+&lt;/repositories&gt;
+			</pre>
+
+			<h3>plugins</h3>
+			<pre>
+&lt;repositories&gt;
+	&lt;repository&gt;
+		&lt;id&gt;everbeen.cz-libs-release&lt;/id&gt;
+		&lt;url&gt;http://everbeen.cz/artifactory/plugins-release-local&lt;/url&gt;
+	&lt;/repository&gt;
+&lt;/repositories&gt;
+			</pre>
+			</div>
+
+			<div id="snapshots" class="halfbox">
+			<h2>snapshots</h2>
+			<div class="perex">
+				<p>
+					The current snapshot versions are as follows:
+				</p>
+				<pre class="dependency">
+&lt;dependency&gt;
+	&lt;groupId&gt;cz.cuni.mff.d3s.been&lt;/groupId&gt;
+	&lt;artifactId&gt;been&lt;/artifactId&gt;
+	&lt;version&gt;3.0.0-SNAPSHOT&lt;/version&gt;
+&lt;/dependency&gt;
+				</pre>
+
+				<pre class="dependency">
+&lt;dependency&gt;
+	&lt;groupId&gt;cz.cuni.mff.d3s.been&lt;/groupId&gt;
+	&lt;artifactId&gt;bpk-maven-plugin&lt;/artifactId&gt;
+	&lt;version&gt;1.0.0-SNAPSHOT&lt;/version&gt;
+&lt;/dependency&gt;
+				</pre>
+			</div>
+
+			<p>
+				Snapshot artifacts are hosted in these repositories:
+			</p>
+			<h3>libs</h3>
+			<pre>
+&lt;repositories&gt;
+	&lt;repository&gt;
+		&lt;id&gt;everbeen.cz-libs-snapshots&lt;/id&gt;
+		&lt;url&gt;http://everbeen.cz/artifactory/libs-snapshot-local&lt;/url&gt;
+	&lt;/repository&gt;
+&lt;/repositories&gt;
+			</pre>
+
+			<h3>plugins</h3>
+			<pre>
+&lt;repositories&gt;
+	&lt;repository&gt;
+		&lt;id&gt;everbeen.cz-libs-snapshots&lt;/id&gt;
+		&lt;url&gt;http://everbeen.cz/artifactory/plugins-snapshot-local&lt;/url&gt;
+	&lt;/repository&gt;
+&lt;/repositories&gt;
+			</pre>
+			</div>
+
+		</div>
+
+		<div id="footer" style="clear: left;">
+			<a href="/index.html">Back to home page</a>
+		</div>
+	</body>
+</html>
