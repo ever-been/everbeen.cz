@@ -1,0 +1,89 @@
+<html>
+	<head>
+		<title>EverBEEN</title>
+		<link rel="stylesheet" type="text/css" href="/css/bootstrap.css"/>
+		<link rel="stylesheet" type="text/css" href="/css/custom.css"/>
+		<script src="js/bootstrap.js" type="text/javascript" charset="utf-8"></script>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+	</head>
+
+	<body>
+		<div id="header">
+		</div>
+
+		<div id="main">
+			<h1>Dojmy ze softwarového projektu EverBEEN</h1>
+
+			<p>
+				Projekt EverBEEN byl oficiálně zahájen 11. listopadu roku 2012. Jednalo se o třetí inkarnaci celkem složitého distribuovaného benchmarkovacího frameworku napsaného v Javě. Codebase, kterou jsme v rámci projektu převzali, čítala cca 80 čistých kLOC. Původním záměrem projektu byl refactoring codebase a náhrada zastaralých technologií novějšími. Odhad prací byl dle zadání refactoring cca. 20 kLOC. Projekt jsme řešili ve 4 lidech. Odevzdali a obhájili jsme v září roku 2013.
+			</p>
+
+			<p>
+				Skutečné práce na projektu začaly již v červnu roku 2012, a probíhaly přes celé prázdniny. Na tohle "předkolečko" se sice komise moc netvářila, nicméně nám umožnilo vyzkoušet si práci v týmu a rozloučit se s jedním původním členem , se kterým nám spolupráce vázla. Obecně se dá říct, že jakmile je projekt oficiálně vypsán, na sestavě týmu nezměníte nic. Proto podobný trial-run doporučujeme všem týmům a zároveň apelujeme na vedoucí a komisi, aby k takové "zkušební době" byli shovívavější.
+			</p>
+
+			<h2>Struktura týmu</h2>
+
+			<p>
+				Projektové týmy sice mají arbitrárně určeného "vedoucího projektu", ten ale má velmi omezené kompetence do práce týmu zasahovat a efektivně spíše konzultuje, než vede. Tým tedy implicitně žádné vedení nemá a studenti si strukturu týmu musí vytvořit sami. Zároveň je ale jasné, že v kolektivu studentů nelze vytvořit arbitrární strukturu, jako např. na pracovišti. Nám se osvědčil model živelného týmu s team leaderem (TL). Team leadera jsme si určili těsně před oficiálním zahájením projektu. Jeho role spočívala především v průběžném usměrňování aktivity teamu (kde vázne práce, jestli někdo nevymýšlí vzdušné zámky atd.). Všechna designová rozhodnutí jsme dělali kolektivně, ale team leader měl případný rozhodující hlas (byl nás sudý počet). Jakkoliv málo byl takovýto zásah ze strany TL potřeba, zajistilo nám to, že i v případě nějakého mezilidského záseku se situace vyřeší.
+			</p>
+
+			<h2>Organizace práce</h2>
+
+			<p>
+				Vzhledem k tomu, kolik je na softwarovém projektu práce, považujeme za naivní myslet si, že členové týmu tuto práci odvedou po večerech doma. Nejspíš nejdůležitější doporučení, které bychom chtěli předat řešitelským týmům, je pravidelně se scházet na workshopy a programovat společně. Odstraní to zbytečné prostoje v komunikaci a zbytečnou práci. Zároveň si pak můžete být jisti, že projekt půjde stabilně dopředu. Doporučenou frekvenci/délku workshopů odhadujeme na cca. 2 x 1 celý den v týdnu. Workshopy je dobré striktně dodržovat, až na výjimečné situace (měsíční pauza na zkouškové, atd.). Typický špatný pracovní model vypadá tak, že se každý týden uspořádá schůzka s vedoucím, kde se mlží a kamufluje, že nikdo vlastně doma nic neudělal, a pak se řešitelé rozejdou na další týden.
+			</p>
+
+			<p>
+				V souvislosti s workshopy je dobré, aby na začátku každého programovacího sezení TL udělal pomyslné "kolečko" - jím moderovanou debatu, kde všichni členové v krátkosti řeknou, na čem pracují, jestli je s tím problém, případně co se jim podařilo doprogramovat doma. Možná to zní zbytečně, ale TL získá možnost práci průběžně usměrňovat. Dále je díky tomu celý tým schopen sledovat celkový vývoj projektu, což je důležité jak pro motivaci, tak pro předejití zbytečné duplikaci práce.
+			</p>
+
+			<p>
+				Schůzky s vedoucím je dobré držet při minimu, tzn. jednou za týden až dva sdělit vedoucímu postup na pracích, zkonzultovat s ním důležitá rozhodnutí a neplýtvat zbytečně jeho časem na řešení konfliktů v týmu (pokud nějaké nastanou). Jediné, jak vám může vedoucí s personálním problémem pomoct, je vám poradit z vlastních zkušeností (které můžou a nemusí být relevantní), nebo vám pomoci extrémně neaktivního/kontraproduktivního člena teamu vyloučit. Tím si moc nepomůžete, protože nového člena po zahájení projektu stejně už nenaberete.
+			</p>
+
+			<h2>Vývojové techniky</h2>
+
+			<p>
+				S výše zmíněnými workshopy a "kolečky" souvisí i code review. Máme dojem, že do značné míry přispěly jak ke kvalitě výsledného softwaru, tak k tomu, co jsme si z vypracování softwarového projektu odnesli. Většina studentů má v době řešení SW projektu omezenou zkušenost z praxe (0-2 firmy), takže zbývá dost prostoru pro zlepšení. Při práci na workshopech lze review provést velmi rychle, formou výkladu od kolegy, co kód programoval, a koukání přes rameno. Nezdá se to, ale odkoukáte za tu dobu spoustu věcí a odstraní se tím největší chyby.
+			</p>
+
+			<p>
+				Dalším benefitem code reviews je redundantní pokrytí kódu členy týmu. Docela nás překvapilo, když jsme se v předchozích ohlasech dočetli, že by se měly striktně separovat domény kódu, tedy kdo co programuje. I na SW projektu se může stát, že někdo nečekaně odpadne, a že po něm někdo jiný bude muset práci rychle převzít. Pokud v tu chvíli v týmu není nikdo další, kdo by se v kódu vyznal, ztratíte víc času, než těmi reviews.
+			</p>
+
+			<p>
+				Pokud máte ten luxus programování projektu "from scratch", máte taky možnost si sami nastavit testovací infrastrukturu. Silně doporučujeme v průběhu vývoje psát alespoň nějakou obdobu unit testů. Pokud vyvíjíte menší komponenty, zvažte psaní testů před samotným kódem. Unit testy se nám vyplatily obzvlášť v případě nízkoúrovňových mikrokomponent, které se v projektu používaly na mnoha místech. Na sepisování infrastruktury pro integrační testy nejspíš nebudete mít čas, ikdyž by to také jistě přineslo své.
+			</p>
+
+			<h2>Dokumentace</h2>
+
+			<p>
+				Studenty údajně často opomíjenou a pedagogy neustále připomínanou součástí projektu je dokumentace. Časté doporučení zní: "Dokumentujte průběžně." To jistě platí třeba pro in-code dokumentaci (JavaDoc, Doxygen etc.), kterou je zvykem udržovat společně s kódem. Ke konci projektu je také přínosná průběžná dokumentace vývojových rozhodnutí. Nám se kolikrát stalo, že se při výše zmíněném "kolečku" strhla debata na 2 hodiny (nebo déle) o tom, jak se něco bude dělat. Pokud k něčemu takovému dojde, sepište si závěry (klidně včetně schémat apod.) a s příslušným datem je uložte někam, kde je později najdete. Pomůže vám to rekonstruovat timeline vývoje, a tedy i práci, kterou jste odvedli.
+			</p>
+
+			<p>
+				Co se týče samotného odevzdávaného dokumentu "dokumentace projektu", má ho dle našeho názoru smysl psát až po dokončení vývoje samotného software. Pokud byste dokument sepisovali průběžně, strávíte hromadu času updatováním a i tak bude v době odevzdání polovina obsahu stejně zastaralá. Sepisování na konci samozřejmě vyžaduje nějaký rezervovaný čas. Náš tým psal a revidoval dokumentaci týden a půl v oslabení (cca. 200 man-hours) a bylo to málo. Pokud chcete mít dokumentaci kvalitní a stíhat v pohodě i revize textu nezávislou třetí stranou, zabere vám to reálně 3 týdny, takže si rezervujte cca. měsíc před odevzdávkou na dokumentování (ona se ta deadline stejně posune). Doporučujeme také připravit nějaké tutorialy, pokud je to relevantní.
+			</p>
+
+			<p>
+				Poslední poznámkou k dokumentaci je, že pokud chcete projekt po odevzdání někde provozovat, uživatelská část dokumentace je podstatně důležitější, než vývojářská. Je velmi pravděpodobné, že vývojářskou dokumentaci budou číst přesně 2 osoby: vedoucí a oponent. Komise ji maximálně zlehka prolistuje. Uživatelskou dokumentaci oproti tomu bude potenciálně číst kdokoliv, kdo se rozhodne váš software používat. Výjimkou jsou samozřejmě částečně komerční projekty, kde vývojářská dokumentace figuruje v procesu předání vypracovaného projektu objednavateli.
+			</p>
+
+			<h2>Osobní dojmy</h2>
+
+			<p>
+				Tato část je věnována osobním dojmům a poznámkám jednotlivých členů týmu <a href="/index.html">everbeen.cz</a>.
+			</p>
+
+			<h3>Martin (TL)</h3>
+			<h3>Kuba</h3>
+			<h3>Tadeáš</h3>
+			<h3>Radek</h3>
+		</div>
+
+		<div id="footer">
+			<a href="/index.html">Back to home page</a>
+		</div>
+	</body>
+</html>
