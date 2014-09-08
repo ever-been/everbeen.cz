@@ -30,3 +30,9 @@ div.halfbox pre.dependency {
 div.halfbox div.perex {
 	height: 200px;
 }
+.screenshot {
+	float: left;
+	clear: left right;
+	margin-top: 5px;
+	margin-bottom: 15px;
+}
